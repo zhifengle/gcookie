@@ -15,7 +15,15 @@ fn main() {
 fn run() -> MyResult<()> {
     let app = build_app();
     let matches = app.get_matches();
-    let site = matches.get_one::<String>("site").unwrap();
+    let site: String = {
+        let mut site = matches.get_one::<String>("site").unwrap().clone();
+        if site.starts_with("http") {
+            let url_obj = url::Url::parse(&site)?;
+            site = url_obj.host_str().unwrap().to_string();
+        }
+        site
+    };
+    let site = &site;
     let chrome_path = matches.get_one::<PathBuf>("chrome_path");
     if chrome_path.is_some() {
         let chromium = browser::Chromium::new(PathBuf::from(chrome_path.unwrap()));
