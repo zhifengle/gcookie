@@ -5,7 +5,7 @@ An tool for getting site cookie from your browser.
 ## About
 
 When you write a script for scraping some data, you may need the cookie of the site.
-Instead of copying cookie string from Browser, you can use the std output of this tools.
+Instead of copying cookie string from Browser, you can use the std output of this tool.
 
 ```js
 const { execSync } = require('child_process');
@@ -21,6 +21,7 @@ cookie = check_output(['gcookie', '-c', 'Edge', site]).decode("utf-8")
 
 This package [bertrandom/chrome-cookies-secure](https://github.com/bertrandom/chrome-cookies-secure) depends on `win-dpapi`.
 `win-dpapi` based on an older version of node-gyp is diffcult to install on Windows.
+
 [moonD4rk/HackBrowserData](https://github.com/moonD4rk/HackBrowserData)
 
 > This tools can export all of the data. In my case, I just want to a single site's cookie.
