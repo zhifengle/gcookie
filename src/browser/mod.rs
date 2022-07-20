@@ -8,6 +8,11 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use self::windows::*;
 
+#[cfg(other)]
+mod other;
+#[cfg(other)]
+pub use self::other::*;
+
 pub struct Firefox {
     profile_path: PathBuf,
 }
