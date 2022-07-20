@@ -6,26 +6,25 @@ pub struct Chromium {
     profile_path: PathBuf,
 }
 
-// @TODO
 impl From<&str> for Chromium {
     fn from(name: &str) -> Self {
         let home_dir = dirs::home_dir().unwrap();
         match name {
             "Chrome" => Chromium {
                 name: name.to_string(),
-                profile_path: home_dir.join("AppData/Local/Google/Chrome/User Data/Default/"),
+                profile_path: home_dir.join(".config/google-chrome/Default"),
             },
             "Chrome Beta" => Chromium {
                 name: name.to_string(),
-                profile_path: home_dir.join("AppData/Local/Google/Chrome Beta/User Data/Default/"),
+                profile_path: home_dir.join(".config/google-chrome-beta/Default"),
             },
             "Chromium" => Chromium {
                 name: name.to_string(),
-                profile_path: home_dir.join("AppData/Local/Google/Chromium/User Data/Default/"),
+                profile_path: home_dir.join(".config/chromium/Default"),
             },
             "Edge" => Chromium {
                 name: name.to_string(),
-                profile_path: home_dir.join("AppData/Local/Microsoft/Edge/User Data/Default/"),
+                profile_path: home_dir.join(".config/microsoft-edge/Default"),
             },
             _ => panic!("invalid browser"),
         }

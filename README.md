@@ -36,6 +36,10 @@ Firefox, Chrome, Edge, Chromium
 
 Firefox
 
+## Install
+
+download the [release](https://github.com/22earth/gcookie/releases) for your system and run the binary
+
 ## Usage
 
 ```text
