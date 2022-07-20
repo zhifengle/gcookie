@@ -60,3 +60,19 @@ Usage: gcookie [OPTIONS] <site>
 # App would use Chrome's cookie in this path
 > gcookie -p /path/to/User Data/Default "bing.com"
 ```
+
+## Development
+
+```shell
+git clone https://github.com/22earth/gcookie
+
+# Build
+cd gcookie
+cargo build
+
+# Run unit tests and integration tests
+cargo test
+
+# Install
+cargo install --path .
+```
