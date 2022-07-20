@@ -1,3 +1,6 @@
+use rusqlite::Result as SqlResult;
+use std::path::PathBuf;
+
 pub struct Chromium {
     pub name: String,
     profile_path: PathBuf,
@@ -41,6 +44,7 @@ impl Chromium {
         Ok(a)
     }
     pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
+        println!("{:?}", self.profile_path);
         unimplemented!("{}", host)
     }
 }
