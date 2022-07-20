@@ -24,17 +24,21 @@ fn run() -> MyResult<()> {
         site
     };
     let site = &site;
-    let chrome_path = matches.get_one::<PathBuf>("chrome_path");
-    if chrome_path.is_some() {
-        let chromium = browser::Chromium::new(PathBuf::from(chrome_path.unwrap()));
-        let res = chromium.get_site_cookie(site)?;
-        print!("{}", res);
-        return Ok(());
-    }
     let firefox = matches.get_one::<PathBuf>("firefox");
     if firefox.is_some() {
         let firefox = browser::Firefox::new(PathBuf::from(firefox.unwrap()));
         let res = firefox.get_site_cookie(site)?;
+        print!("{}", res);
+        return Ok(());
+    }
+    let os = std::env::consts::OS;
+    if os != "windows" {
+        panic!("Chrome not supported in {}", os);
+    }
+    let chrome_path = matches.get_one::<PathBuf>("chrome_path");
+    if chrome_path.is_some() {
+        let chromium = browser::Chromium::new(PathBuf::from(chrome_path.unwrap()));
+        let res = chromium.get_site_cookie(site)?;
         print!("{}", res);
         return Ok(());
     }
