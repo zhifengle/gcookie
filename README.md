@@ -13,15 +13,14 @@ let site = 'bing.com';
 const cookie = execSync(`gcookie ${site}`).toString();
 ```
 
-This package [bertrandom/chrome-cookies-secure](https://github.com/bertrandom/chrome-cookies-secure) depends on `win-dpapi`.
-`win-dpapi` based on an older version of node-gyp is diffcult to install on Windows.
-
 ```python
 from subprocess import check_output
 site = 'bing.com'
 cookie = check_output(['gcookie', '-c', 'Edge', site]).decode("utf-8")
 ```
 
+This package [bertrandom/chrome-cookies-secure](https://github.com/bertrandom/chrome-cookies-secure) depends on `win-dpapi`.
+`win-dpapi` based on an older version of node-gyp is diffcult to install on Windows.
 [moonD4rk/HackBrowserData](https://github.com/moonD4rk/HackBrowserData)
 
 > This tools can export all of the data. In my case, I just want to a single site's cookie.
