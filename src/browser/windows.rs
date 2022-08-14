@@ -17,20 +17,20 @@ pub struct Chromium {
 impl From<&str> for Chromium {
     fn from(name: &str) -> Self {
         let home_dir = dirs::home_dir().unwrap();
-        match name {
-            "Chrome" => Chromium {
+        match name.to_lowercase().as_ref() {
+            "chrome" => Chromium {
                 name: name.to_string(),
                 profile_path: home_dir.join("AppData/Local/Google/Chrome/User Data/Default/"),
             },
-            "Chrome Beta" => Chromium {
+            "chrome beta" => Chromium {
                 name: name.to_string(),
                 profile_path: home_dir.join("AppData/Local/Google/Chrome Beta/User Data/Default/"),
             },
-            "Chromium" => Chromium {
+            "chromium" => Chromium {
                 name: name.to_string(),
                 profile_path: home_dir.join("AppData/Local/Google/Chromium/User Data/Default/"),
             },
-            "Edge" => Chromium {
+            "edge" => Chromium {
                 name: name.to_string(),
                 profile_path: home_dir.join("AppData/Local/Microsoft/Edge/User Data/Default/"),
             },
