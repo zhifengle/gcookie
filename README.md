@@ -66,6 +66,27 @@ Usage: gcookie [OPTIONS] <site>
 > gcookie -p /path/to/User Data/Default "bing.com"
 ```
 
+## Lib Usage
+
+Add this to your Cargo.toml
+
+```toml
+[dependencies]
+gcookie = "*"
+```
+
+get cookie by Chrome
+
+```Rust
+let site = "http://cn.bing.com";
+let cookie = gcookie::gcookie_chrome(site, None, None);
+
+let site = "bing.com";
+let browser = Some("Edge");
+let cookie = gcookie::gcookie_chrome(site, browser, None);
+assert!(cookie.is_ok());
+```
+
 ## Development
 
 ```shell

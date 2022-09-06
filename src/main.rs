@@ -1,9 +1,7 @@
-mod browser;
-mod cookie;
-
+use clap::{arg, Command};
+use gcookie::{gcookie_chrome, gcookie_firefox};
 use std::{error::Error, path::PathBuf};
 
-use clap::{arg, Command};
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
 fn main() {
@@ -15,43 +13,23 @@ fn main() {
 fn run() -> MyResult<()> {
     let app = build_app();
     let matches = app.get_matches();
-    let site: String = {
-        let mut site = matches.get_one::<String>("site").unwrap().clone();
-        if site.starts_with("http") {
-            let url_obj = url::Url::parse(&site)?;
-            site = url_obj.host_str().unwrap().to_string();
-        }
-        site
-    };
-    let site = &site;
+    let site = matches.get_one::<String>("site").unwrap();
     let firefox = matches.get_one::<PathBuf>("firefox");
     if firefox.is_some() {
-        let firefox = browser::Firefox::new(PathBuf::from(firefox.unwrap()));
-        let res = firefox.get_site_cookie(site)?;
+        let res = gcookie_firefox(site, firefox.unwrap())?;
         print!("{}", res);
         return Ok(());
-    }
-    let os = std::env::consts::OS;
-    if os != "windows" {
-        panic!("Chrome not supported in {}", os);
     }
     let chrome_path = matches.get_one::<PathBuf>("chrome_path");
-    if chrome_path.is_some() {
-        let chromium = browser::Chromium::new(PathBuf::from(chrome_path.unwrap()));
-        let res = chromium.get_site_cookie(site)?;
-        print!("{}", res);
-        return Ok(());
-    }
-    let chrome = matches.get_one::<String>("chrome").unwrap();
-    let chrome: browser::Chromium = chrome.as_str().into();
-    let res = chrome.get_site_cookie(site)?;
+    let chrome = matches.get_one::<String>("chrome").map(|s| s.as_str());
+    let res = gcookie_chrome(site, chrome, chrome_path)?;
     print!("{}", res);
     Ok(())
 }
 
 fn build_app() -> Command<'static> {
     let app = Command::new("gcookie")
-        .version("0.0.1")
+        .version("0.0.3")
         .about("get site cookie string")
         .arg(arg!(-c --chrome [chrome] "Chrome's name. Chrome, Chromium, Chrome Beta or Edge is OK.")
         .default_value("Chrome"))

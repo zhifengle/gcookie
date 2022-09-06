@@ -1,9 +1,18 @@
 [package]
 name = "gcookie"
-version = "0.1.0"
+version = "0.0.3"
 edition = "2021"
+authors = ["Alan Yang <zhifengle@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+description = "An tool for getting site cookie from your browser"
+repository = "https://github.com/22earth/gcookie"
+keywords = ["cookie", "chrome", "firefox"]
+include = ["src/**/*", "README.md"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+test = false
+name = "gcookie"
 
 [dependencies]
 clap = "3"
