@@ -30,6 +30,7 @@ pub fn gcookie_chrome(
     chrome_path: Option<&PathBuf>,
 ) -> Result<String, Box<dyn Error>> {
     let os = std::env::consts::OS;
+    // if !(os == "windows" || os == "linux") {
     if os != "windows" {
         panic!("Chrome not supported in {}", os);
     }
