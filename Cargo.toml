@@ -6,7 +6,7 @@ authors = ["Alan Yang <zhifengle@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 description = "An tool for getting site cookie from your browser"
-repository = "https://github.com/22earth/gcookie"
+repository = "https://github.com/zhifengle/gcookie"
 keywords = ["cookie", "chrome", "firefox"]
 include = ["src/**/*", "README.md"]
 
