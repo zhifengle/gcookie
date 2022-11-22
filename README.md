@@ -1,6 +1,6 @@
 # gcookie
 
-An tool for getting site cookie from your browser.
+A tool for getting site cookie from your browser.
 
 ## About
 
@@ -38,7 +38,7 @@ Firefox
 
 ## Install
 
-download the [release](https://github.com/22earth/gcookie/releases) for your system and run the binary
+download the [release](https://github.com/zhifengle/gcookie/releases) for your system and run the binary
 
 ## Usage
 
@@ -90,7 +90,7 @@ assert!(cookie.is_ok());
 ## Development
 
 ```shell
-git clone https://github.com/22earth/gcookie
+git clone https://github.com/zhifengle/gcookie
 
 # Build
 cd gcookie
