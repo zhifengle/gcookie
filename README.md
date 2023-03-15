@@ -15,8 +15,26 @@ const cookie = execSync(`gcookie ${site}`).toString();
 
 ```python
 from subprocess import check_output
-site = 'bing.com'
+site = 'https://cn.bing.com'
+# output of cookies in `cn.bing.com`. not `bing.com`
 cookie = check_output(['gcookie', '-c', 'Edge', site]).decode("utf-8")
+# example in Scrapy
+def get_cookies_dict(cookies):
+    if not cookies:
+        return {}
+    return {c.split('=')[0]: c.split('=')[1] for c in cookies.split('; ')}
+
+class DemoSpider(scrapy.Spider):
+    name = 'demo'
+
+    def start_requests(self):
+        cookies_dict = get_cookies_dict("your_cookies")
+        yield scrapy.Request(
+            url,
+            headers={'Content-Type': 'application/json'},
+            cookies=cookies_dict,
+            callback=self.parse,
+        )
 ```
 
 This package [bertrandom/chrome-cookies-secure](https://github.com/bertrandom/chrome-cookies-secure) depends on `win-dpapi`.
