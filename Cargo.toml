@@ -15,7 +15,7 @@ test = false
 name = "gcookie"
 
 [dependencies]
-clap = "3"
+clap = "4.2.7"
 dirs = "4.0"
 rusqlite = { version = "0.28.0", features = ["bundled"] }
 serde_json = "1.0"

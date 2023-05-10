@@ -27,7 +27,7 @@ fn run() -> MyResult<()> {
     Ok(())
 }
 
-fn build_app() -> Command<'static> {
+fn build_app() -> Command {
     let app = Command::new("gcookie")
         .version("0.0.3")
         .about("get site cookie string")
