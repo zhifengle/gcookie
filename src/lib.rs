@@ -2,6 +2,7 @@ use std::{error::Error, path::PathBuf};
 
 pub mod browser;
 pub mod cookie;
+pub mod copy;
 
 fn get_site(site: &str) -> Result<String, url::ParseError> {
     if site.starts_with("http") {

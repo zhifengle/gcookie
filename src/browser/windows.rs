@@ -1,34 +1,39 @@
 use aes_gcm::aead::{Aead, NewAead};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rusqlite::{Connection, Result as SqlResult, Row};
-use std::os::raw::c_void;
+use std::ffi::c_void;
+use std::fs::remove_file;
 use std::path::PathBuf;
-use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::Foundation::{CloseHandle, LocalFree, HANDLE, HLOCAL};
+use windows::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
 use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
 use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
-use windows::Win32::{
-    Security::Cryptography::{CryptUnprotectData, CRYPTOAPI_BLOB},
-    System::Memory::LocalFree,
-};
 
 use crate::cookie::{Cookie, SiteCookie};
+use crate::copy::rawcopy;
 
 fn is_elevated() -> bool {
     let mut result = false;
     let mut handle: HANDLE = HANDLE(0);
     unsafe {
-        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut handle).into() {
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut handle).is_ok() {
             let elevation = TOKEN_ELEVATION::default();
             let size = std::mem::size_of::<TOKEN_ELEVATION>() as u32;
             let mut ret_size = size;
             let raw_ptr = &elevation as *const _ as *mut c_void;
-            if GetTokenInformation(handle, TokenElevation.into(), raw_ptr, size, &mut ret_size).into() {
+            if GetTokenInformation(
+                handle,
+                TokenElevation.into(),
+                Some(raw_ptr),
+                size,
+                &mut ret_size,
+            )
+            .is_ok()
+            {
                 result = elevation.TokenIsElevated != 0;
             }
         }
-        if handle.0 != 0 {
-            CloseHandle(handle);
-        }
+        let _ = CloseHandle(handle);
     }
     result
 }
@@ -78,26 +83,40 @@ impl Chromium {
         let v = base64::decode(v.as_str().unwrap()).unwrap();
         Ok(crypt_unprotect_data(&v[5..])?)
     }
-    pub fn get_cookies_path(&self) -> PathBuf {
-        let path = self.profile_path.join("Network/Cookies");
-        path
-    }
-    pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
+    pub fn get_cookies_connection(&self) -> SqlResult<Connection> {
         let path = self.profile_path.join("Network/Cookies");
         if !path.exists() {
             return Err(rusqlite::Error::InvalidPath(path));
         }
+        let tmp_dir = std::env::temp_dir();
+        let mut tmp_cookie: Option<PathBuf> = None;
         let conn_result = Connection::open(&path);
-        if conn_result.is_err() {
-            let err = conn_result.unwrap_err();
-            if let rusqlite::Error::SqliteFailure(e, Some(_)) = err {
-                if rusqlite::ErrorCode::CannotOpen == e.code {}
+        if conn_result.is_ok() {
+            return conn_result;
+        }
+        let err = conn_result.unwrap_err();
+        if let rusqlite::Error::SqliteFailure(e, Some(_)) = err {
+            if rusqlite::ErrorCode::CannotOpen == e.code {
+                if !is_elevated() {
+                    return Err(rusqlite::Error::SqliteFailure(
+                        e,
+                        Some("Browser has locked cookie, please run as administrator".to_string()),
+                    ));
+                }
+                let p = path.as_os_str().to_str().unwrap();
+                let tmp_cookie_path = tmp_dir.join("Cookies");
+                if tmp_cookie_path.exists() {
+                    remove_file(&tmp_cookie_path).unwrap();
+                }
+                rawcopy(p, tmp_dir.as_os_str().to_str().unwrap()).unwrap();
+                tmp_cookie = Some(tmp_cookie_path);
             }
         }
-        let conn = Connection::open(&path).expect(&format!(
-            "invalid cookie path: {}",
-            path.display().to_string()
-        ));
+        Connection::open(&tmp_cookie.unwrap())
+    }
+    pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
+        let conn = self.get_cookies_connection()?;
+
         let key = self.get_key().expect("cannot get key");
         let statement = format!("SELECT host_key, path, name, value, encrypted_value FROM cookies where host_key = '{host}' or host_key = '.{host}'");
 
@@ -131,29 +150,21 @@ fn crypt_unprotect_data(crypted_bytes: &[u8]) -> windows::core::Result<Vec<u8>> 
     let len = crypted_bytes.len();
     let mut bytes = Vec::from(crypted_bytes);
     let pb = bytes.as_mut_ptr();
-    let mut blob = CRYPTOAPI_BLOB {
+    let mut blob = CRYPT_INTEGER_BLOB {
         pbData: pb,
         cbData: len as u32,
     };
     let mut out = Vec::with_capacity(len);
-    let mut blob_out = CRYPTOAPI_BLOB {
+    let mut blob_out = CRYPT_INTEGER_BLOB {
         pbData: out.as_mut_ptr(),
         cbData: out.len() as u32,
     };
     unsafe {
-        CryptUnprotectData(
-            &mut blob,
-            std::ptr::null_mut(),
-            std::ptr::null(),
-            std::ptr::null_mut(),
-            std::ptr::null(),
-            0,
-            &mut blob_out,
-        )
-        .ok()?;
+        CryptUnprotectData(&mut blob, None, None, None, None, 0, &mut blob_out).ok();
+
         let slice = std::slice::from_raw_parts(blob_out.pbData, blob_out.cbData as usize);
         // LocalFree(blob.pbData as isize);
-        LocalFree(blob_out.pbData as isize);
+        LocalFree(HLOCAL(blob_out.pbData.cast()));
         Ok(slice.to_vec())
     }
 }
@@ -191,6 +202,8 @@ mod tests {
     }
     #[test]
     fn is_elevated_ok() {
-        assert!(is_elevated());
+        // run with admin
+        println!("---- run with admin ----- {}", is_elevated());
+        // assert!(is_elevated());
     }
 }
