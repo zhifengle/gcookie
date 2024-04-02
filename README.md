@@ -2,6 +2,12 @@
 
 A tool for getting site cookie from your browser.
 
+> [!note]  
+> Chrome above 110 would lock Cookies file when browser is running.
+> please run gcookie with administrator privileges or close browser.
+
+Edge has a running process in background, please terminate it or elevate gcookie's privileges
+
 ## About
 
 When you write a script for scraping some data, you may need the cookie of the site.

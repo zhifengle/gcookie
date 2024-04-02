@@ -1,5 +1,5 @@
-use aes_gcm::aead::{Aead, NewAead};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
+use aes_gcm::aead::Aead;
+use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce};
 use rusqlite::{Connection, Result as SqlResult, Row};
 use std::ffi::c_void;
 use std::fs::remove_file;
@@ -170,7 +170,7 @@ fn crypt_unprotect_data(crypted_bytes: &[u8]) -> windows::core::Result<Vec<u8>> 
 }
 
 fn aes_gcm_decrypt(value: &[u8], key: &[u8], nonce: &[u8]) -> Vec<u8> {
-    let key = Key::from_slice(key);
+    let key = Key::<Aes256Gcm>::from_slice(key);
     let cipher = Aes256Gcm::new(key);
 
     let nonce = Nonce::from_slice(nonce);
