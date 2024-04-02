@@ -1,13 +1,37 @@
 use aes_gcm::aead::{Aead, NewAead};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rusqlite::{Connection, Result as SqlResult, Row};
+use std::os::raw::c_void;
 use std::path::PathBuf;
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 use windows::Win32::{
     Security::Cryptography::{CryptUnprotectData, CRYPTOAPI_BLOB},
     System::Memory::LocalFree,
 };
 
 use crate::cookie::{Cookie, SiteCookie};
+
+fn is_elevated() -> bool {
+    let mut result = false;
+    let mut handle: HANDLE = HANDLE(0);
+    unsafe {
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut handle).into() {
+            let elevation = TOKEN_ELEVATION::default();
+            let size = std::mem::size_of::<TOKEN_ELEVATION>() as u32;
+            let mut ret_size = size;
+            let raw_ptr = &elevation as *const _ as *mut c_void;
+            if GetTokenInformation(handle, TokenElevation.into(), raw_ptr, size, &mut ret_size).into() {
+                result = elevation.TokenIsElevated != 0;
+            }
+        }
+        if handle.0 != 0 {
+            CloseHandle(handle);
+        }
+    }
+    result
+}
 
 pub struct Chromium {
     pub name: String,
@@ -54,8 +78,22 @@ impl Chromium {
         let v = base64::decode(v.as_str().unwrap()).unwrap();
         Ok(crypt_unprotect_data(&v[5..])?)
     }
+    pub fn get_cookies_path(&self) -> PathBuf {
+        let path = self.profile_path.join("Network/Cookies");
+        path
+    }
     pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
         let path = self.profile_path.join("Network/Cookies");
+        if !path.exists() {
+            return Err(rusqlite::Error::InvalidPath(path));
+        }
+        let conn_result = Connection::open(&path);
+        if conn_result.is_err() {
+            let err = conn_result.unwrap_err();
+            if let rusqlite::Error::SqliteFailure(e, Some(_)) = err {
+                if rusqlite::ErrorCode::CannotOpen == e.code {}
+            }
+        }
         let conn = Connection::open(&path).expect(&format!(
             "invalid cookie path: {}",
             path.display().to_string()
@@ -150,5 +188,9 @@ mod tests {
         let res = chrome.get_site_cookie("example.com");
         assert!(res.is_ok());
         // println!("{}", res.unwrap());
+    }
+    #[test]
+    fn is_elevated_ok() {
+        assert!(is_elevated());
     }
 }
