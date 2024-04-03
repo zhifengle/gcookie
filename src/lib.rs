@@ -2,6 +2,8 @@ use std::{error::Error, path::PathBuf};
 
 pub mod browser;
 pub mod cookie;
+
+#[cfg(target_os = "windows")]
 pub mod copy;
 
 fn get_site(site: &str) -> Result<String, url::ParseError> {
