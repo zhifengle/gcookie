@@ -57,7 +57,7 @@ impl From<&str> for Chromium {
             },
             "chromium" => Chromium {
                 name: name.to_string(),
-                profile_path: home_dir.join("AppData/Local/Google/Chromium/User Data/Default/"),
+                profile_path: home_dir.join("AppData/Local/Chromium/User Data/Default/"),
             },
             "edge" => Chromium {
                 name: name.to_string(),
