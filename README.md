@@ -4,9 +4,7 @@ A tool for getting site cookie from your browser.
 
 > [!note]  
 > Chrome above 110 would lock Cookies file when browser is running.
-> please run gcookie with administrator privileges or close browser.
-
-Edge has a running process in background, please terminate it or elevate gcookie's privileges
+> If you encounter an error, please try running gcookie with administrator privileges or close the browser.
 
 ## About
 
@@ -87,7 +85,7 @@ Usage: gcookie [OPTIONS] <site>
 > gcookie -f /path/to/profiles/xx.p "bing.com"
 
 # App would use Chrome's cookie in this path
-> gcookie -p /path/to/User Data/Default "bing.com"
+> gcookie -p "/path/to/User Data/Default" "bing.com"
 ```
 
 ## Lib Usage
