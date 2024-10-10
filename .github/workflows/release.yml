@@ -39,3 +39,11 @@ jobs:
         with:
           RUSTTARGET: ${{ matrix.target }}
           EXTRA_FILES: 'README.md LICENSE'
+      - name: Upload Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.compile.outputs.BUILT_ARCHIVE }}
+          asset_name: gcookie_${{ github.ref_name }}_x86_64-unknown-linux-musl.zip
+          tag: ${{ github.ref_name }}
+          overwrite: true
