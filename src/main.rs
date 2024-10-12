@@ -1,4 +1,4 @@
-use clap::{arg, Command};
+use clap::{arg, crate_version, Command};
 use gcookie::browser::{get_chrome_cookies_by_path, get_cookies, get_firefox_cookies_by_path};
 use std::{error::Error, path::PathBuf};
 
@@ -34,7 +34,7 @@ fn run() -> MyResult<()> {
 
 fn build_app() -> Command {
     let app = Command::new("gcookie")
-        .version("0.1.0")
+        .version(crate_version!())
         .about("get site cookie string")
         .arg(
             arg!(-c --chrome [chrome] "Browser's name. Chrome, Chromium, Edge or Firefox is OK.")
