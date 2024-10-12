@@ -3,7 +3,7 @@
 A tool for getting site cookie from your browser.
 
 > [!note]  
-> Chrome above 110 would lock Cookies file when browser is running.
+> Chrome above 110 would lock Cookies file when browser is running in Windows.
 > If you encounter an error, please try running gcookie with administrator privileges or close the browser.
 
 ## About
@@ -94,19 +94,46 @@ Add this to your Cargo.toml
 
 ```toml
 [dependencies]
-gcookie = "*"
+gcookie = "0.1.0"
 ```
+
+> [!note]  
+> Version 0.1.0 introduces a breaking change: the API has changed.
+> It now uses the library "rookie" as the backend to read cookies.
+> The original internal cookie reading function is deprecated.
 
 get cookie by Chrome
 
-```Rust
-let site = "http://cn.bing.com";
-let cookie = gcookie::gcookie_chrome(site, None, None);
+```rust
+let site = "http://google.com";
+let cookie = gcookie::get_cookies("chrome", site);
 
 let site = "bing.com";
-let browser = Some("Edge");
-let cookie = gcookie::gcookie_chrome(site, browser, None);
+let browser = "Edge";
+let cookie = gcookie::get_cookies(browser, site);
 assert!(cookie.is_ok());
+
+let site = "https://google.com";
+let mut path = PathBuf::new();
+path.push(r"C:\my_chrome\user data\default");
+let cookie =  match gcookie::get_chrome_cookies_by_path(site, &path) {
+    Ok(cookie) => cookie,
+    Err(err) => panic!("An error occurred when get cookie '{}': {}", site, err),
+};
+```
+
+get cookie by Firefox with path
+
+```rust
+let site = "https://www.mozilla.org/";
+
+let mut path = PathBuf::new();
+path.push(r"C:\my_firefox\profile");
+
+let cookie =  match gcookie::get_firefox_cookies_by_path(site, &path) {
+    Ok(cookie) => cookie,
+    Err(err) => panic!("An error occurred when get cookie '{}': {}", site, err),
+};
 ```
 
 ## Development
