@@ -1,18 +1,10 @@
-use std::{error::Error, path::PathBuf};
-
 pub mod browser;
 
 #[cfg(target_os = "windows")]
 pub mod windows;
 
-pub fn get_site(site: &str) -> Result<String, url::ParseError> {
-    if site.starts_with("http") {
-        let url_obj = url::Url::parse(&site)?;
-        Ok(url_obj.host_str().unwrap().to_string())
-    } else {
-        Ok(site.to_string())
-    }
-}
+use browser::utils::get_site;
+use std::{error::Error, path::PathBuf};
 
 /// Get cookie from site by Chromium. Only working in Windows.
 ///
@@ -26,6 +18,7 @@ pub fn get_site(site: &str) -> Result<String, url::ParseError> {
 ///     Err(err) => panic!("An error occurred when get cookie '{}': {}", site, err),
 /// };
 /// ```
+#[cfg(target_os = "windows")]
 pub fn gcookie_chrome(
     site: &str,
     browser: Option<&str>,
