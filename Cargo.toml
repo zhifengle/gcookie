@@ -15,7 +15,7 @@ test = false
 name = "gcookie"
 
 [dependencies]
-clap = "4.2.7"
+clap = "4.5.20"
 dirs = "5.0.1"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 serde_json = "1.0"
@@ -35,12 +35,12 @@ anyhow = "1"
 ntfs = "0.4"
 
 [target.'cfg(windows)'.dependencies.windows]
-version = "0.54.0"
+version = "0.58.0"
 features = [
-    "Win32_System_Memory",
     "Win32_System_Threading",
     "Win32_Foundation",
     "Win32_Security_Cryptography",
+    "Win32_System_RestartManager"
 ]
 
 [profile.release]

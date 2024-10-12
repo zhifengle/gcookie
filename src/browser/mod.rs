@@ -1,17 +1,15 @@
-use crate::cookie::{Cookie, SiteCookie};
+use cookie::{Cookie, SiteCookie};
 use rusqlite::{Connection, Result as SqlResult, Row};
 use std::path::PathBuf;
 
+pub mod cookie;
+mod rookie_utils;
+pub use rookie_utils::*;
 #[cfg(target_os = "windows")]
 mod windows;
 
 #[cfg(target_os = "windows")]
 pub use self::windows::*;
-
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "linux")]
-pub use self::linux::*;
 
 pub struct Firefox {
     profile_path: PathBuf,
@@ -70,6 +68,6 @@ fn firefox_connect_sql_ok() {
     let firefox = Firefox {
         profile_path: profile,
     };
-    let res = firefox.get_site_cookie("bgm.tv");
+    let res = firefox.get_site_cookie("bing.com");
     assert!(res.is_ok());
 }

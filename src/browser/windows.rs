@@ -1,42 +1,11 @@
-use aes_gcm::aead::Aead;
-use aes_gcm::{Aes256Gcm, Key, KeyInit, Nonce};
 use rusqlite::{Connection, Result as SqlResult, Row};
-use std::ffi::c_void;
 use std::fs::remove_file;
 use std::path::PathBuf;
-use windows::Win32::Foundation::{CloseHandle, LocalFree, HANDLE, HLOCAL};
-use windows::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
-use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
-use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
-use crate::cookie::{Cookie, SiteCookie};
-use crate::copy::rawcopy;
-
-fn is_elevated() -> bool {
-    let mut result = false;
-    let mut handle: HANDLE = HANDLE(0);
-    unsafe {
-        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut handle).is_ok() {
-            let elevation = TOKEN_ELEVATION::default();
-            let size = std::mem::size_of::<TOKEN_ELEVATION>() as u32;
-            let mut ret_size = size;
-            let raw_ptr = &elevation as *const _ as *mut c_void;
-            if GetTokenInformation(
-                handle,
-                TokenElevation.into(),
-                Some(raw_ptr),
-                size,
-                &mut ret_size,
-            )
-            .is_ok()
-            {
-                result = elevation.TokenIsElevated != 0;
-            }
-        }
-        let _ = CloseHandle(handle);
-    }
-    result
-}
+use super::cookie::{Cookie, SiteCookie};
+use crate::windows::{
+    aes_gcm_decrypt, crypt_unprotect_data, is_elevated, rawcopy, release_file_lock,
+};
 
 pub struct Chromium {
     pub name: String,
@@ -88,14 +57,19 @@ impl Chromium {
         if !path.exists() {
             return Err(rusqlite::Error::InvalidPath(path));
         }
-        let tmp_dir = std::env::temp_dir();
-        let mut tmp_cookie: Option<PathBuf> = None;
+        if is_elevated() {
+            let tmp_cookie_path = self.get_temp_cookies_path(&path);
+            return Connection::open(&tmp_cookie_path);
+        }
+        unsafe {
+            release_file_lock(path.as_os_str().to_str().unwrap());
+        }
         let conn_result = Connection::open(&path);
         if conn_result.is_ok() {
             return conn_result;
         }
         let err = conn_result.unwrap_err();
-        if let rusqlite::Error::SqliteFailure(e, Some(_)) = err {
+        if let rusqlite::Error::SqliteFailure(e, _) = err {
             if rusqlite::ErrorCode::CannotOpen == e.code {
                 if !is_elevated() {
                     return Err(rusqlite::Error::SqliteFailure(
@@ -103,16 +77,22 @@ impl Chromium {
                         Some("Browser has locked cookie, please run as administrator".to_string()),
                     ));
                 }
-                let p = path.as_os_str().to_str().unwrap();
-                let tmp_cookie_path = tmp_dir.join("Cookies");
-                if tmp_cookie_path.exists() {
-                    remove_file(&tmp_cookie_path).unwrap();
-                }
-                rawcopy(p, tmp_dir.as_os_str().to_str().unwrap()).unwrap();
-                tmp_cookie = Some(tmp_cookie_path);
+                let tmp_cookie_path = self.get_temp_cookies_path(&path);
+                return Connection::open(&tmp_cookie_path);
             }
         }
-        Connection::open(&tmp_cookie.unwrap())
+        Err(err)
+    }
+    fn get_temp_cookies_path(&self, path: &PathBuf) -> PathBuf {
+        let tmp_dir = std::env::temp_dir();
+        let p = path.as_os_str().to_str().unwrap();
+        let tmp_cookie_path = tmp_dir.join("Cookies");
+        if tmp_cookie_path.exists() {
+            remove_file(&tmp_cookie_path).unwrap();
+        }
+        // need administrator permission
+        rawcopy(p, tmp_dir.as_os_str().to_str().unwrap()).unwrap();
+        tmp_cookie_path
     }
     pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
         let conn = self.get_cookies_connection()?;
@@ -146,41 +126,6 @@ impl Chromium {
     }
 }
 
-fn crypt_unprotect_data(crypted_bytes: &[u8]) -> windows::core::Result<Vec<u8>> {
-    let len = crypted_bytes.len();
-    let mut bytes = Vec::from(crypted_bytes);
-    let pb = bytes.as_mut_ptr();
-    let mut blob = CRYPT_INTEGER_BLOB {
-        pbData: pb,
-        cbData: len as u32,
-    };
-    let mut out = Vec::with_capacity(len);
-    let mut blob_out = CRYPT_INTEGER_BLOB {
-        pbData: out.as_mut_ptr(),
-        cbData: out.len() as u32,
-    };
-    unsafe {
-        CryptUnprotectData(&mut blob, None, None, None, None, 0, &mut blob_out).ok();
-
-        let slice = std::slice::from_raw_parts(blob_out.pbData, blob_out.cbData as usize);
-        // LocalFree(blob.pbData as isize);
-        LocalFree(HLOCAL(blob_out.pbData.cast()));
-        Ok(slice.to_vec())
-    }
-}
-
-fn aes_gcm_decrypt(value: &[u8], key: &[u8], nonce: &[u8]) -> Vec<u8> {
-    let key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(key);
-
-    let nonce = Nonce::from_slice(nonce);
-
-    let plaintext = cipher
-        .decrypt(nonce, value)
-        .expect("decryption aes_gcm value failure!");
-    plaintext
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,9 +146,10 @@ mod tests {
         // println!("{}", res.unwrap());
     }
     #[test]
-    fn is_elevated_ok() {
-        // run with admin
-        println!("---- run with admin ----- {}", is_elevated());
-        // assert!(is_elevated());
+    fn edge_connect_sql_ok() {
+        let chrome: Chromium = "edge".into();
+        let res = chrome.get_site_cookie("bing.com");
+        assert!(res.is_ok());
+        // println!("{}", res.unwrap());
     }
 }
