@@ -21,29 +21,22 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body_path: ./CHANGELOG.md
-  build:
-    name: release ${{ matrix.target }}
-    runs-on: ubuntu-latest
+  upload-assets:
     strategy:
-      fail-fast: false
       matrix:
-        # windows build error
-        # target: [x86_64-pc-windows-gnu, x86_64-unknown-linux-musl]
-        target: [x86_64-unknown-linux-musl]
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@master
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+      - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          RUSTTARGET: ${{ matrix.target }}
-          EXTRA_FILES: 'README.md LICENSE'
-      - name: Upload Release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ steps.compile.outputs.BUILT_ARCHIVE }}
-          asset_name: gcookie_${{ github.ref_name }}_x86_64-unknown-linux-musl.zip
-          tag: ${{ github.ref_name }}
-          overwrite: true
+          bin: gcookie
+          target: ${{ matrix.target }}
+          tar: unix
+          zip: windows
+          # checksum: sha256
+          token: ${{ secrets.GITHUB_TOKEN }}
