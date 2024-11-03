@@ -40,6 +40,10 @@ class DemoSpider(scrapy.Spider):
         )
 ```
 
+> [!note]  
+> If you're a JavaScript or Python user, please check out [thewh1teagle/rookie](https://github.com/thewh1teagle/rookie).
+> Initially, I was developing this tool without the rookie library, but I have now switched to using it.
+
 ## Supported Browser
 
 ### Windows
