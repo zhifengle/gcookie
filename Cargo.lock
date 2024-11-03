@@ -308,12 +308,6 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "base64"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -844,17 +838,13 @@ version = "0.1.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "base64 0.13.1",
+ "base64",
  "clap",
  "dirs",
- "hmac",
- "libaes",
  "ntfs",
- "pbkdf2 0.11.0",
  "rookie",
  "rusqlite",
  "serde_json",
- "sha1",
  "url",
  "windows 0.58.0",
 ]
@@ -1044,12 +1034,6 @@ checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "libaes"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "884609db30d6c40a6bd8e0e22b0b5002546e4dcb53295d33fc700b1644b8a656"
 
 [[package]]
 name = "libc"
@@ -1248,15 +1232,6 @@ name = "parking"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f38d5652c16fde515bb1ecef450ab0f6a219d619a7274976324d5e377f7dceba"
-
-[[package]]
-name = "pbkdf2"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a0692ec44e4cf1ef28ca317f14f8f07da2d95ec3fa01f86e4467b725e60917"
-dependencies = [
- "digest",
-]
 
 [[package]]
 name = "pbkdf2"
@@ -1485,13 +1460,13 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "rookie"
-version = "0.5.2"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c0d97843a70970bec8e17bbf6329a5865f12c21c8fcb6e263a806b170fcfad6"
+checksum = "ec13c4a0a48ef3a59770e8680eab740027ade9502c693320be12af29c025897e"
 dependencies = [
  "aes",
  "aes-gcm",
- "base64 0.22.1",
+ "base64",
  "byteorder",
  "cbc",
  "eyre",
@@ -1500,7 +1475,8 @@ dependencies = [
  "libesedb",
  "log",
  "lz4_flex",
- "pbkdf2 0.12.2",
+ "once_cell",
+ "pbkdf2",
  "privilege",
  "rand",
  "rawcopy-rs-next",
@@ -1640,6 +1616,7 @@ version = "1.0.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
 dependencies = [
+ "indexmap",
  "itoa",
  "memchr",
  "ryu",

@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result as SqlResult, Row};
 use std::fs::remove_file;
 use std::path::PathBuf;
+use base64::{engine::general_purpose, Engine as _};
 
 use super::cookie::{Cookie, SiteCookie};
 use crate::windows::{
@@ -49,8 +50,18 @@ impl Chromium {
         let json: serde_json::Value =
             serde_json::from_reader(file).expect("Local State should be JSON");
         let v = &json["os_crypt"]["encrypted_key"];
-        let v = base64::decode(v.as_str().unwrap()).unwrap();
+        let v = general_purpose::STANDARD.decode(v.as_str().unwrap())?;
         Ok(crypt_unprotect_data(&v[5..])?)
+    }
+    pub fn get_app_bound_encrypted_key(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let file = std::fs::File::open(self.profile_path.join("../").join("Local State"))?;
+        let json: serde_json::Value = serde_json::from_reader(file)?;
+        let app_bound_encrypted_key = json["os_crypt"]["app_bound_encrypted_key"].as_str().unwrap();
+        if !app_bound_encrypted_key.starts_with("APPB") {
+            return Err("invalid app_bound_encrypted_key".into());
+        }
+        let v = general_purpose::STANDARD.decode(&app_bound_encrypted_key[..])?;
+        Ok(crypt_unprotect_data(&v)?)
     }
     pub fn get_cookies_connection(&self) -> SqlResult<Connection> {
         let path = self.profile_path.join("Network/Cookies");
@@ -144,6 +155,12 @@ mod tests {
         let res = chrome.get_site_cookie("example.com");
         assert!(res.is_ok());
         // println!("{}", res.unwrap());
+    }
+    #[test]
+    fn edge_get_app_bound_encrypted_key_ok() {
+        let chrome: Chromium = "edge".into();
+        let key = chrome.get_app_bound_encrypted_key().unwrap();
+        println!("{:?}", key);
     }
     #[test]
     fn edge_connect_sql_ok() {

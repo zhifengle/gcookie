@@ -3,8 +3,7 @@
 A tool for getting site cookie from your browser.
 
 > [!note]  
-> Chrome above 110 would lock Cookies file when browser is running in Windows.
-> If you encounter an error, please try running gcookie with administrator privileges or close the browser.
+> Chrome above 130 has changed the security of Chrome cookies on Windows, please try running gcookie with administrator privileges.
 
 ## About
 
