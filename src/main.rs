@@ -1,5 +1,5 @@
 use clap::{arg, crate_version, Command};
-use gcookie::browser::{gcookie_utils::gcookie_chrome, get_chrome_cookies_by_path, get_cookies, get_firefox_cookies_by_path, Chromium};
+use gcookie::browser::{gcookie_chrome_by_path, get_cookies, get_firefox_cookies_by_path};
 use std::{error::Error, path::PathBuf};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
@@ -22,14 +22,7 @@ fn run() -> MyResult<()> {
     }
     let chrome_path = matches.get_one::<PathBuf>("chrome_path");
     if let Some(p) = chrome_path {
-        let browser = Chromium::new(p.clone());
-        let res = {
-            if browser.is_v10() {
-                gcookie_chrome(site, None, chrome_path)?
-            } else {
-                get_chrome_cookies_by_path(site, p)?
-            }
-        };
+        let res = gcookie_chrome_by_path(site, p)?;
         print!("{}", res);
         return Ok(());
     }

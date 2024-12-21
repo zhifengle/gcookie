@@ -53,7 +53,6 @@ impl Chromium {
             serde_json::from_reader(file).expect("Local State should be JSON");
         let v = &json["os_crypt"]["encrypted_key"];
         let app_bound_encrypted_key = &json["os_crypt"]["app_bound_encrypted_key"];
-        println!("{:?}", app_bound_encrypted_key);
         return !v.is_null() && app_bound_encrypted_key.is_null();
     }
     pub fn get_key(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
