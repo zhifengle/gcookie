@@ -2,6 +2,8 @@ use rusqlite::{Connection, Result as SqlResult, Row};
 use std::fs::remove_file;
 use std::path::PathBuf;
 use base64::{engine::general_purpose, Engine as _};
+use sha2::{Sha256, Digest};
+
 
 use super::cookie::{Cookie, SiteCookie};
 use crate::windows::{
@@ -44,6 +46,15 @@ impl Chromium {
             name: "Chrome".to_string(),
             profile_path: path,
         }
+    }
+    pub fn is_v10(&self) -> bool {
+        let file = std::fs::File::open(self.profile_path.join("../").join("Local State")).expect("cannot open Local State");
+        let json: serde_json::Value =
+            serde_json::from_reader(file).expect("Local State should be JSON");
+        let v = &json["os_crypt"]["encrypted_key"];
+        let app_bound_encrypted_key = &json["os_crypt"]["app_bound_encrypted_key"];
+        println!("{:?}", app_bound_encrypted_key);
+        return !v.is_null() && app_bound_encrypted_key.is_null();
     }
     pub fn get_key(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let file = std::fs::File::open(self.profile_path.join("../").join("Local State"))?;
@@ -127,10 +138,17 @@ impl Chromium {
                 continue;
             }
             let mut cookie = cookie?;
+            let hash = Sha256::digest(cookie.host.as_bytes());
             let value = &cookie.encrypted_value[15..];
             let nonce = &cookie.encrypted_value[3..15];
-            cookie.value = String::from_utf8(aes_gcm_decrypt(value, &key, nonce))
-                .expect(&format!("parse cookie: {} err", cookie.name));
+            let value = aes_gcm_decrypt(value, &key, nonce);
+            if value.starts_with(hash.as_ref()) {
+                cookie.value = String::from_utf8(value[hash.len()..].to_vec())
+                    .expect(&format!("parse hash cookie: {} err", cookie.name));
+            } else {
+                cookie.value = String::from_utf8(value)
+                    .expect(&format!("parse cookie: {} err", cookie.name));
+            }
             site_cookie.push(cookie);
         }
         Ok(site_cookie.to_string())
@@ -148,7 +166,12 @@ mod tests {
         let chrome: Chromium = "Chrome".into();
         assert!(chrome.get_key().is_ok());
     }
-
+    #[test]
+    fn is_v10_ok() {
+        // let p = PathBuf::from(r"C:\Users\xxx\Documents\test\test-chrome\profiles\Default\");
+        // let chrome: Chromium = Chromium::new(p);
+        // assert!(chrome.is_v10());
+    }
     #[test]
     fn chrome_connect_sql_ok() {
         let chrome: Chromium = "Chrome".into();
