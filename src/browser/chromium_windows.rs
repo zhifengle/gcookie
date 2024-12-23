@@ -137,6 +137,10 @@ impl Chromium {
                 continue;
             }
             let mut cookie = cookie?;
+            if !cookie.value.is_empty() && cookie.encrypted_value.is_empty() {
+                site_cookie.push(cookie);
+                continue;
+            }
             let hash = Sha256::digest(cookie.host.as_bytes());
             let value = &cookie.encrypted_value[15..];
             let nonce = &cookie.encrypted_value[3..15];
