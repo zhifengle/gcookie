@@ -39,6 +39,10 @@ features = [
 ]
 
 [profile.release]
+codegen-units = 1
+debug = "full"
 lto = true
-strip = true
-opt-level = "z"
+opt-level = "s"
+panic = "abort"
+split-debuginfo = "packed"
+strip = "symbols"
