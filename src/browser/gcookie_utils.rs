@@ -1,4 +1,4 @@
-use super::{firefox::Firefox, utils::get_site};
+use super::{cookie::Cookie, firefox::Firefox, utils::get_site};
 use std::{error::Error, path::PathBuf};
 
 /// Get cookie from site by Chromium. Only working in Windows.
@@ -19,6 +19,18 @@ pub fn gcookie_chrome(
     browser: Option<&str>,
     chrome_path: Option<&PathBuf>,
 ) -> Result<String, Box<dyn Error>> {
+    Ok(
+        super::cookie::SiteCookie::from(gcookie_chrome_entries(site, browser, chrome_path)?)
+            .to_string(),
+    )
+}
+
+#[cfg(target_os = "windows")]
+pub fn gcookie_chrome_entries(
+    site: &str,
+    browser: Option<&str>,
+    chrome_path: Option<&PathBuf>,
+) -> Result<Vec<Cookie>, Box<dyn Error>> {
     use super::Chromium;
 
     let os = std::env::consts::OS;
@@ -31,7 +43,7 @@ pub fn gcookie_chrome(
         Some(path) => Chromium::new(PathBuf::from(path)),
         None => browser.unwrap_or("Chrome").into(),
     };
-    Ok(chromium.get_site_cookie(&site)?)
+    Ok(chromium.get_site_cookies(&site)?)
 }
 
 /// Get cookie from site by Firefox.
@@ -53,6 +65,12 @@ pub fn gcookie_firefox(site: &str, path: &PathBuf) -> Result<String, Box<dyn Err
     let site = get_site(site)?;
     let firefox = Firefox::new(PathBuf::from(path));
     Ok(firefox.get_site_cookie(&site)?)
+}
+
+pub fn gcookie_firefox_entries(site: &str, path: &PathBuf) -> Result<Vec<Cookie>, Box<dyn Error>> {
+    let site = get_site(site)?;
+    let firefox = Firefox::new(PathBuf::from(path));
+    Ok(firefox.get_site_cookies(&site)?)
 }
 
 #[cfg(test)]

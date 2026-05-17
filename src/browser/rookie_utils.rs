@@ -1,15 +1,22 @@
+use super::cookie::{Cookie, SiteCookie};
 use super::utils::get_site;
 use std::{error::Error, path::PathBuf};
 
-// cookies to string
-fn gen_cookies_string(cookies: Vec<rookie::enums::Cookie>) -> String {
-    let mut cookie_str = String::new();
-    cookies.iter().for_each(|cookie| {
-        cookie_str.push_str(&format!("{}={}; ", cookie.name, cookie.value));
-    });
-    cookie_str.pop();
-    cookie_str.pop();
-    cookie_str
+fn map_rookie_cookies(cookies: Vec<rookie::enums::Cookie>) -> Vec<Cookie> {
+    cookies
+        .into_iter()
+        .map(|cookie| Cookie {
+            domain: cookie.domain,
+            path: cookie.path,
+            name: cookie.name,
+            value: cookie.value,
+            secure: cookie.secure,
+            http_only: cookie.http_only,
+            expires: cookie.expires,
+            same_site: Some(cookie.same_site),
+            encrypted_value: vec![],
+        })
+        .collect()
 }
 
 /// Get cookie from site
@@ -25,6 +32,11 @@ fn gen_cookies_string(cookies: Vec<rookie::enums::Cookie>) -> String {
 /// };
 /// ```
 pub fn get_cookies(browser: &str, site: &str) -> Result<String, Box<dyn Error>> {
+    Ok(SiteCookie::from(get_cookie_entries(browser, site)?).to_string())
+}
+
+/// Get structured cookies from site.
+pub fn get_cookie_entries(browser: &str, site: &str) -> Result<Vec<Cookie>, Box<dyn Error>> {
     let site = get_site(site)?;
     let domains = Some(vec![site]);
     let cookies = match browser.to_lowercase().as_str() {
@@ -40,7 +52,7 @@ pub fn get_cookies(browser: &str, site: &str) -> Result<String, Box<dyn Error>> 
         }
     }?;
 
-    Ok(gen_cookies_string(cookies))
+    Ok(map_rookie_cookies(cookies))
 }
 
 /// Get cookie from site by Chrome with path.
@@ -59,6 +71,14 @@ pub fn get_cookies(browser: &str, site: &str) -> Result<String, Box<dyn Error>> 
 /// };
 /// ```
 pub fn get_chrome_cookies_by_path(site: &str, path: &PathBuf) -> Result<String, Box<dyn Error>> {
+    Ok(SiteCookie::from(get_chrome_cookie_entries_by_path(site, path)?).to_string())
+}
+
+/// Get structured cookies from Chrome with path.
+pub fn get_chrome_cookie_entries_by_path(
+    site: &str,
+    path: &PathBuf,
+) -> Result<Vec<Cookie>, Box<dyn Error>> {
     let cookies_path = path.join("Network/Cookies");
     if !cookies_path.exists() {
         panic!("{} not exists", cookies_path.display());
@@ -72,7 +92,7 @@ pub fn get_chrome_cookies_by_path(site: &str, path: &PathBuf) -> Result<String, 
         Some(key_path.to_str().unwrap()),
     )?;
 
-    Ok(gen_cookies_string(cookies))
+    Ok(map_rookie_cookies(cookies))
 }
 
 /// Get cookie from site by Firefox with path.
@@ -91,6 +111,14 @@ pub fn get_chrome_cookies_by_path(site: &str, path: &PathBuf) -> Result<String, 
 /// };
 /// ```
 pub fn get_firefox_cookies_by_path(site: &str, path: &PathBuf) -> Result<String, Box<dyn Error>> {
+    Ok(SiteCookie::from(get_firefox_cookie_entries_by_path(site, path)?).to_string())
+}
+
+/// Get structured cookies from Firefox with path.
+pub fn get_firefox_cookie_entries_by_path(
+    site: &str,
+    path: &PathBuf,
+) -> Result<Vec<Cookie>, Box<dyn Error>> {
     let site = get_site(site)?;
     let cookies_path = path.join("cookies.sqlite");
     if !cookies_path.exists() {
@@ -99,7 +127,7 @@ pub fn get_firefox_cookies_by_path(site: &str, path: &PathBuf) -> Result<String,
     let domains = Some(vec![site]);
     let cookies = rookie::any_browser(cookies_path.to_str().unwrap(), domains, None)?;
 
-    Ok(gen_cookies_string(cookies))
+    Ok(map_rookie_cookies(cookies))
 }
 
 #[cfg(test)]

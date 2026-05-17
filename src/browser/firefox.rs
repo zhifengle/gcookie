@@ -11,34 +11,42 @@ impl Firefox {
         Self { profile_path: path }
     }
     pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
+        Ok(SiteCookie::from(self.get_site_cookies(host)?).to_string())
+    }
+
+    pub fn get_site_cookies(&self, host: &str) -> SqlResult<Vec<Cookie>> {
         let path = self.profile_path.join("cookies.sqlite");
         let conn = Connection::open(&path).expect(&format!(
             "invalid cookie path: {}",
             path.display().to_string()
         ));
         let statement = format!(
-            "SELECT host, path, name, value FROM moz_cookies where host = '{host}' or host = '.{host}'"
+            "SELECT host, path, name, value, isSecure, isHttpOnly, expiry, sameSite FROM moz_cookies where host = '{host}' or host = '.{host}'"
         );
 
         let mut stmt = conn.prepare(&statement)?;
         let rows = stmt.query_map([], |row: &Row| {
             Ok(Cookie {
-                host: row.get(0)?,
+                domain: row.get(0)?,
                 path: row.get(1)?,
                 name: row.get(2)?,
                 value: row.get(3)?,
+                secure: row.get::<_, i64>(4)? != 0,
+                http_only: row.get::<_, i64>(5)? != 0,
+                expires: row.get(6)?,
+                same_site: row.get(7)?,
                 encrypted_value: vec![],
             })
         })?;
-        let mut site_cookie = SiteCookie::new();
+        let mut cookies = Vec::new();
         for cookie in rows {
             if cookie.is_err() {
                 continue;
             }
             let cookie = cookie?;
-            site_cookie.push(cookie);
+            cookies.push(cookie);
         }
-        Ok(site_cookie.to_string())
+        Ok(cookies)
     }
 }
 

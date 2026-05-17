@@ -16,13 +16,14 @@ name = "gcookie"
 
 [dependencies]
 clap = { version = "4.5", features = ["cargo"] }
-dirs = "5.0.1"
+dirs = "6.0.0"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 base64 = "0.22"
 url = "2.2.2"
 rookie = { git = "https://github.com/FeldrinH/rookie.git", branch = "main" }
-sha2 = "0.10.8"
+sha2 = "0.11.0"
 
 [target.'cfg(windows)'.dependencies]
 aes-gcm = "0.10.3"
@@ -30,7 +31,7 @@ anyhow = "1"
 ntfs = "0.4"
 
 [target.'cfg(windows)'.dependencies.windows]
-version = "0.58.0"
+version = "0.62.2"
 features = [
     "Win32_System_Threading",
     "Win32_Foundation",

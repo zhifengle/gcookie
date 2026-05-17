@@ -11,11 +11,8 @@
 
 use anyhow::{bail, Context, Result};
 
-
 use ntfs::indexes::NtfsFileNameIndex;
-use ntfs::structured_values::{
-    NtfsFileName, NtfsFileNamespace,
-};
+use ntfs::structured_values::{NtfsFileName, NtfsFileNamespace};
 use ntfs::{Ntfs, NtfsFile, NtfsReadSeek};
 
 use std::collections::VecDeque;
@@ -24,7 +21,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Read, Seek, Write};
 use std::path::{Component, PathBuf};
 
-use std::{path};
+use std::path;
 
 use super::SectorReader;
 
@@ -39,14 +36,14 @@ where
 }
 ///
 /// copy file from `file_path` to `save_path`
-/// 
+///
 /// params: <p>`file_path` is the absolute path of the file must exist. </p>
 /// <p><pre>`save_path` is the directory where the copied file will be saved.  
 ///             The directory must exist, and the file must not exist.  
 ///             The file name will be the same as the name of the file being copied.  
 ///             If it points to an NTFS filesystem image, then a suffix will be appended.</pre></p>
-/// 
-/// 
+///
+///
 pub fn rawcopy(file_path: &str, save_path: &str) -> Result<()> {
     let path = path::PathBuf::from(file_path);
 
@@ -66,7 +63,7 @@ pub fn rawcopy(file_path: &str, save_path: &str) -> Result<()> {
     let prefix = components.pop_front().unwrap();
     let file = components.pop_back().unwrap();
 
-    let prefix = format!(r"\\.\{prefix}");// wait https://github.com/dylni/normpath update tobe remove this line.
+    let prefix = format!(r"\\.\{prefix}"); // wait https://github.com/dylni/normpath update tobe remove this line.
 
     let f = File::open(prefix)?;
     let sr = SectorReader::new(f, 4096)?;

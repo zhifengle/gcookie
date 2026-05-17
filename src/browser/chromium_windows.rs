@@ -1,9 +1,8 @@
+use base64::{engine::general_purpose, Engine as _};
 use rusqlite::{Connection, Result as SqlResult, Row};
+use sha2::{Digest, Sha256};
 use std::fs::remove_file;
 use std::path::PathBuf;
-use base64::{engine::general_purpose, Engine as _};
-use sha2::{Sha256, Digest};
-
 
 use super::cookie::{Cookie, SiteCookie};
 use crate::windows::{
@@ -48,7 +47,8 @@ impl Chromium {
         }
     }
     pub fn is_v10(&self) -> bool {
-        let file = std::fs::File::open(self.profile_path.join("../").join("Local State")).expect("cannot open Local State");
+        let file = std::fs::File::open(self.profile_path.join("../").join("Local State"))
+            .expect("cannot open Local State");
         let json: serde_json::Value =
             serde_json::from_reader(file).expect("Local State should be JSON");
         let v = &json["os_crypt"]["encrypted_key"];
@@ -66,7 +66,9 @@ impl Chromium {
     pub fn get_app_bound_encrypted_key(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let file = std::fs::File::open(self.profile_path.join("../").join("Local State"))?;
         let json: serde_json::Value = serde_json::from_reader(file)?;
-        let app_bound_encrypted_key = json["os_crypt"]["app_bound_encrypted_key"].as_str().unwrap();
+        let app_bound_encrypted_key = json["os_crypt"]["app_bound_encrypted_key"]
+            .as_str()
+            .unwrap();
         if !app_bound_encrypted_key.starts_with("APPB") {
             return Err("invalid app_bound_encrypted_key".into());
         }
@@ -116,32 +118,41 @@ impl Chromium {
         tmp_cookie_path
     }
     pub fn get_site_cookie(&self, host: &str) -> SqlResult<String> {
+        Ok(SiteCookie::from(self.get_site_cookies(host)?).to_string())
+    }
+
+    pub fn get_site_cookies(&self, host: &str) -> SqlResult<Vec<Cookie>> {
         let conn = self.get_cookies_connection()?;
 
         let key = self.get_key().expect("cannot get key");
-        let statement = format!("SELECT host_key, path, name, value, encrypted_value FROM cookies where host_key = '{host}' or host_key = '.{host}'");
+        let statement = format!("SELECT host_key, path, name, value, encrypted_value, is_secure, is_httponly, expires_utc, samesite FROM cookies where host_key = '{host}' or host_key = '.{host}'");
 
         let mut stmt = conn.prepare(&statement)?;
         let rows = stmt.query_map([], |row: &Row| {
+            let expires_utc: i64 = row.get(7)?;
             Ok(Cookie {
-                host: row.get(0)?,
+                domain: row.get(0)?,
                 path: row.get(1)?,
                 name: row.get(2)?,
                 value: row.get(3)?,
                 encrypted_value: row.get(4)?,
+                secure: row.get::<_, i64>(5)? != 0,
+                http_only: row.get::<_, i64>(6)? != 0,
+                expires: chrome_expires_to_unix_seconds(expires_utc),
+                same_site: row.get(8)?,
             })
         })?;
-        let mut site_cookie = SiteCookie::new();
+        let mut cookies = Vec::new();
         for cookie in rows {
             if cookie.is_err() {
                 continue;
             }
             let mut cookie = cookie?;
             if !cookie.value.is_empty() && cookie.encrypted_value.is_empty() {
-                site_cookie.push(cookie);
+                cookies.push(cookie);
                 continue;
             }
-            let hash = Sha256::digest(cookie.host.as_bytes());
+            let hash = Sha256::digest(cookie.domain.as_bytes());
             let value = &cookie.encrypted_value[15..];
             let nonce = &cookie.encrypted_value[3..15];
             let value = aes_gcm_decrypt(value, &key, nonce);
@@ -149,12 +160,27 @@ impl Chromium {
                 cookie.value = String::from_utf8(value[hash.len()..].to_vec())
                     .expect(&format!("parse hash cookie: {} err", cookie.name));
             } else {
-                cookie.value = String::from_utf8(value)
-                    .expect(&format!("parse cookie: {} err", cookie.name));
+                cookie.value =
+                    String::from_utf8(value).expect(&format!("parse cookie: {} err", cookie.name));
             }
-            site_cookie.push(cookie);
+            cookies.push(cookie);
         }
-        Ok(site_cookie.to_string())
+        Ok(cookies)
+    }
+}
+
+fn chrome_expires_to_unix_seconds(expires_utc: i64) -> Option<u64> {
+    const WINDOWS_TO_UNIX_EPOCH_SECONDS: i64 = 11_644_473_600;
+
+    if expires_utc <= 0 {
+        return None;
+    }
+
+    let seconds = expires_utc / 1_000_000 - WINDOWS_TO_UNIX_EPOCH_SECONDS;
+    if seconds > 0 {
+        Some(seconds as u64)
+    } else {
+        None
     }
 }
 

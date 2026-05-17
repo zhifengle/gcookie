@@ -16,15 +16,31 @@ pub mod gcookie_utils;
 
 #[cfg(target_os = "windows")]
 pub fn gcookie_chrome_by_path(site: &str, path: &PathBuf) -> Result<String, Box<dyn Error>> {
+    Ok(cookie::SiteCookie::from(gcookie_chrome_entries_by_path(site, path)?).to_string())
+}
+
+#[cfg(target_os = "windows")]
+pub fn gcookie_chrome_entries_by_path(
+    site: &str,
+    path: &PathBuf,
+) -> Result<Vec<cookie::Cookie>, Box<dyn Error>> {
     let browser = Chromium::new(path.clone());
     if browser.is_v10() {
-        return gcookie_utils::gcookie_chrome(site, None, Some(path));
+        return gcookie_utils::gcookie_chrome_entries(site, None, Some(path));
     } else {
-        return get_chrome_cookies_by_path(site, path);
+        return get_chrome_cookie_entries_by_path(site, path);
     }
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn gcookie_chrome_by_path(site: &str, path: &PathBuf) -> Result<String, Box<dyn Error>> {
-    return get_chrome_cookies_by_path(site, path);
+    Ok(cookie::SiteCookie::from(gcookie_chrome_entries_by_path(site, path)?).to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn gcookie_chrome_entries_by_path(
+    site: &str,
+    path: &PathBuf,
+) -> Result<Vec<cookie::Cookie>, Box<dyn Error>> {
+    return get_chrome_cookie_entries_by_path(site, path);
 }

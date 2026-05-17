@@ -15,7 +15,7 @@ pub unsafe fn release_file_lock(file_path: &str) -> bool {
     let mut session: u32 = 0;
     let mut session_key_buffer = [0_u16; (CCH_RM_SESSION_KEY as usize) + 1];
     let session_key = PWSTR(session_key_buffer.as_mut_ptr());
-    let result = RmStartSession(&mut session, 0, session_key);
+    let result = RmStartSession(&mut session, Some(0), session_key);
     if result == ERROR_SUCCESS {
         let result = RmRegisterResources(session, Some(&[PCWSTR(file_path.as_ptr())]), None, None);
         if result == ERROR_SUCCESS {

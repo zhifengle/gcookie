@@ -67,6 +67,14 @@ Usage: gcookie [OPTIONS] <site>
 
 `gcookie -h` print help infomation.
 
+The default output is the cookie header string format:
+
+```text
+name=value; name2=value2
+```
+
+Use `--format json` to print structured cookies, or `--format netscape` to print a Netscape cookie file compatible with tools such as curl and wget.
+
 ## Examples
 
 ```shell
@@ -82,6 +90,12 @@ Usage: gcookie [OPTIONS] <site>
 
 # App would use Chrome's cookie in this path
 > gcookie -p "/path/to/User Data/Default" "bing.com"
+
+# Output structured cookies as JSON
+> gcookie --format json "bing.com"
+
+# Output Netscape cookie file format
+> gcookie --format netscape "bing.com"
 ```
 
 ## Lib Usage

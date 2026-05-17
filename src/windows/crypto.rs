@@ -21,7 +21,7 @@ pub fn crypt_unprotect_data(crypted_bytes: &[u8]) -> windows::core::Result<Vec<u
 
         let slice = std::slice::from_raw_parts(blob_out.pbData, blob_out.cbData as usize);
         // LocalFree(blob.pbData as isize);
-        LocalFree(HLOCAL(blob_out.pbData.cast()));
+        LocalFree(Some(HLOCAL(blob_out.pbData.cast())));
         Ok(slice.to_vec())
     }
 }
