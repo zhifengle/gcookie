@@ -1,4 +1,9 @@
-use super::{cookie::Cookie, firefox::Firefox, utils::get_site};
+use super::{
+    cookie::Cookie,
+    firefox::Firefox,
+    provider::{Browser, CookieQuery},
+    utils::get_site,
+};
 use std::{error::Error, path::PathBuf};
 
 /// Get cookie from site by Chromium. Only working in Windows.
@@ -31,19 +36,17 @@ pub fn gcookie_chrome_entries(
     browser: Option<&str>,
     chrome_path: Option<&PathBuf>,
 ) -> Result<Vec<Cookie>, Box<dyn Error>> {
-    use super::Chromium;
-
     let os = std::env::consts::OS;
     // if !(os == "windows" || os == "linux") {
     if os != "windows" {
         panic!("Chrome not supported in {}", os);
     }
-    let site = get_site(site)?;
-    let chromium = match chrome_path {
-        Some(path) => Chromium::new(PathBuf::from(path)),
-        None => browser.unwrap_or("Chrome").into(),
-    };
-    Ok(chromium.get_site_cookies(&site)?)
+    let browser = browser.unwrap_or("Chrome").parse::<Browser>()?;
+    let mut query = CookieQuery::new(browser, site);
+    if let Some(path) = chrome_path {
+        query = query.with_profile_path(PathBuf::from(path));
+    }
+    super::provider::get_cookie_entries(&query)
 }
 
 /// Get cookie from site by Firefox.

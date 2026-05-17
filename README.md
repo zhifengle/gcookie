@@ -132,6 +132,13 @@ let cookie =  match gcookie::get_chrome_cookies_by_path(site, &path) {
 };
 ```
 
+get structured cookies through the unified query API
+
+```rust
+let query = gcookie::CookieQuery::new(gcookie::Browser::Chrome, "https://google.com");
+let cookies = gcookie::get_cookie_entries_for_query(&query)?;
+```
+
 get cookie by Firefox with path
 
 ```rust

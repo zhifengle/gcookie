@@ -1,6 +1,9 @@
 use super::cookie::{Cookie, SiteCookie};
+use super::provider::{Browser, CookieProvider, CookieQuery};
 use super::utils::get_site;
 use std::{error::Error, path::PathBuf};
+
+pub struct RookieProvider;
 
 fn map_rookie_cookies(cookies: Vec<rookie::enums::Cookie>) -> Vec<Cookie> {
     cookies
@@ -17,6 +20,46 @@ fn map_rookie_cookies(cookies: Vec<rookie::enums::Cookie>) -> Vec<Cookie> {
             encrypted_value: vec![],
         })
         .collect()
+}
+
+impl CookieProvider for RookieProvider {
+    fn get_cookies(&self, query: &CookieQuery) -> Result<Vec<Cookie>, Box<dyn Error>> {
+        let site = get_site(&query.site)?;
+        let domains = Some(vec![site]);
+        let cookies = match (&query.browser, &query.profile_path) {
+            (Browser::Firefox, Some(path)) => {
+                let cookies_path = path.join("cookies.sqlite");
+                if !cookies_path.exists() {
+                    panic!("{} not exists", cookies_path.display());
+                }
+                rookie::any_browser(cookies_path.to_str().unwrap(), domains, None)
+            }
+            (browser, Some(path)) if browser.is_chromium_based() => {
+                let cookies_path = path.join("Network/Cookies");
+                if !cookies_path.exists() {
+                    panic!("{} not exists", cookies_path.display());
+                }
+                let key_path = path.join("../Local State");
+                rookie::any_browser(
+                    cookies_path.to_str().unwrap(),
+                    domains,
+                    Some(key_path.to_str().unwrap()),
+                )
+            }
+            (Browser::Firefox, None) => rookie::firefox(domains),
+            (Browser::Chrome, None) => rookie::chrome(domains),
+            (Browser::Chromium, None) => rookie::chromium(domains),
+            (Browser::Edge, None) => rookie::edge(domains),
+            (browser, Some(_)) => {
+                return Err(Box::from(format!(
+                    "Profile path is not supported for {}",
+                    browser.as_name()
+                )))
+            }
+        }?;
+
+        Ok(map_rookie_cookies(cookies))
+    }
 }
 
 /// Get cookie from site
@@ -37,22 +80,8 @@ pub fn get_cookies(browser: &str, site: &str) -> Result<String, Box<dyn Error>> 
 
 /// Get structured cookies from site.
 pub fn get_cookie_entries(browser: &str, site: &str) -> Result<Vec<Cookie>, Box<dyn Error>> {
-    let site = get_site(site)?;
-    let domains = Some(vec![site]);
-    let cookies = match browser.to_lowercase().as_str() {
-        "firefox" => rookie::firefox(domains),
-        "chrome" => rookie::chrome(domains),
-        "chromium" => rookie::chromium(domains),
-        "edge" => rookie::edge(domains),
-        _ => {
-            return Err(Box::from(format!(
-                "Unsupported browser: {}; please use firefox, chrome, chromium or edge",
-                browser
-            )))
-        }
-    }?;
-
-    Ok(map_rookie_cookies(cookies))
+    let query = CookieQuery::new(browser.parse::<Browser>()?, site);
+    super::provider::get_cookie_entries(&query)
 }
 
 /// Get cookie from site by Chrome with path.
@@ -79,20 +108,8 @@ pub fn get_chrome_cookie_entries_by_path(
     site: &str,
     path: &PathBuf,
 ) -> Result<Vec<Cookie>, Box<dyn Error>> {
-    let cookies_path = path.join("Network/Cookies");
-    if !cookies_path.exists() {
-        panic!("{} not exists", cookies_path.display());
-    }
-    let key_path = path.join("../Local State");
-    let site = get_site(site)?;
-    let domains = Some(vec![site]);
-    let cookies = rookie::any_browser(
-        cookies_path.to_str().unwrap(),
-        domains,
-        Some(key_path.to_str().unwrap()),
-    )?;
-
-    Ok(map_rookie_cookies(cookies))
+    let query = CookieQuery::new(Browser::Chrome, site).with_profile_path(path.clone());
+    super::provider::get_cookie_entries(&query)
 }
 
 /// Get cookie from site by Firefox with path.
@@ -119,15 +136,8 @@ pub fn get_firefox_cookie_entries_by_path(
     site: &str,
     path: &PathBuf,
 ) -> Result<Vec<Cookie>, Box<dyn Error>> {
-    let site = get_site(site)?;
-    let cookies_path = path.join("cookies.sqlite");
-    if !cookies_path.exists() {
-        panic!("{} not exists", cookies_path.display());
-    }
-    let domains = Some(vec![site]);
-    let cookies = rookie::any_browser(cookies_path.to_str().unwrap(), domains, None)?;
-
-    Ok(map_rookie_cookies(cookies))
+    let query = CookieQuery::new(Browser::Firefox, site).with_profile_path(path.clone());
+    super::provider::get_cookie_entries(&query)
 }
 
 #[cfg(test)]

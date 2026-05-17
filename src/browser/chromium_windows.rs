@@ -5,6 +5,8 @@ use std::fs::remove_file;
 use std::path::PathBuf;
 
 use super::cookie::{Cookie, SiteCookie};
+use super::provider::{CookieProvider, CookieQuery};
+use super::utils::get_site;
 use crate::windows::{
     aes_gcm_decrypt, crypt_unprotect_data, is_elevated, rawcopy, release_file_lock,
 };
@@ -12,6 +14,20 @@ use crate::windows::{
 pub struct Chromium {
     pub name: String,
     profile_path: PathBuf,
+}
+
+pub struct NativeChromiumWindowsProvider;
+
+impl CookieProvider for NativeChromiumWindowsProvider {
+    fn get_cookies(&self, query: &CookieQuery) -> Result<Vec<Cookie>, Box<dyn std::error::Error>> {
+        let Some(profile_path) = &query.profile_path else {
+            return Err("Native Chromium Windows provider requires a profile path".into());
+        };
+
+        let site = get_site(&query.site)?;
+        let chromium = Chromium::new(profile_path.clone());
+        Ok(chromium.get_site_cookies(&site)?)
+    }
 }
 
 impl From<&str> for Chromium {

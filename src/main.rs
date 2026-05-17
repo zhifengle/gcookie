@@ -1,8 +1,6 @@
-use clap::{arg, crate_version, Command};
+use clap::{arg, crate_version, ArgMatches, Command};
 use gcookie::browser::cookie::{OutputFormat, SiteCookie};
-use gcookie::browser::{
-    gcookie_chrome_entries_by_path, get_cookie_entries, get_firefox_cookie_entries_by_path,
-};
+use gcookie::browser::{get_cookie_entries_for_query, Browser, CookieQuery};
 use std::{error::Error, path::PathBuf};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
@@ -14,29 +12,35 @@ fn main() {
     }
 }
 fn run() -> MyResult<()> {
-    let app = build_app();
-    let matches = app.get_matches();
-    let site = matches.get_one::<String>("site").unwrap();
-    let format = matches
-        .get_one::<String>("format")
-        .unwrap()
-        .parse::<OutputFormat>()?;
-    let firefox = matches.get_one::<PathBuf>("firefox");
-    if let Some(firefox) = firefox {
-        let cookies = get_firefox_cookie_entries_by_path(site, firefox)?;
-        print!("{}", SiteCookie::from(cookies).format(format)?);
-        return Ok(());
-    }
-    let chrome_path = matches.get_one::<PathBuf>("chrome_path");
-    if let Some(p) = chrome_path {
-        let cookies = gcookie_chrome_entries_by_path(site, p)?;
-        print!("{}", SiteCookie::from(cookies).format(format)?);
-        return Ok(());
-    }
-    let browser = matches.get_one::<String>("chrome").map(|s| s.as_str());
-    let cookies = get_cookie_entries(browser.unwrap(), site)?;
+    let matches = build_app().get_matches();
+    let query = build_cookie_query(&matches)?;
+    let format = get_output_format(&matches)?;
+    let cookies = get_cookie_entries_for_query(&query)?;
+
     print!("{}", SiteCookie::from(cookies).format(format)?);
     Ok(())
+}
+
+fn build_cookie_query(matches: &ArgMatches) -> MyResult<CookieQuery> {
+    let site = matches.get_one::<String>("site").unwrap();
+
+    if let Some(firefox) = matches.get_one::<PathBuf>("firefox") {
+        return Ok(CookieQuery::new(Browser::Firefox, site).with_profile_path(firefox.clone()));
+    }
+
+    if let Some(chrome_path) = matches.get_one::<PathBuf>("chrome_path") {
+        return Ok(CookieQuery::new(Browser::Chrome, site).with_profile_path(chrome_path.clone()));
+    }
+
+    let browser = matches.get_one::<String>("chrome").unwrap();
+    Ok(CookieQuery::new(browser.parse::<Browser>()?, site))
+}
+
+fn get_output_format(matches: &ArgMatches) -> MyResult<OutputFormat> {
+    Ok(matches
+        .get_one::<String>("format")
+        .unwrap()
+        .parse::<OutputFormat>()?)
 }
 
 fn build_app() -> Command {
@@ -64,4 +68,60 @@ fn build_app() -> Command {
         .arg(arg!(<site> "URL of the site or host of the site"));
 
     app
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn matches(args: &[&str]) -> ArgMatches {
+        build_app().try_get_matches_from(args).unwrap()
+    }
+
+    #[test]
+    fn builds_default_chrome_query() {
+        let matches = matches(&["gcookie", "example.com"]);
+        let query = build_cookie_query(&matches).unwrap();
+
+        assert_eq!(query, CookieQuery::new(Browser::Chrome, "example.com"));
+    }
+
+    #[test]
+    fn builds_named_browser_query() {
+        let matches = matches(&["gcookie", "-c", "Edge", "bing.com"]);
+        let query = build_cookie_query(&matches).unwrap();
+
+        assert_eq!(query, CookieQuery::new(Browser::Edge, "bing.com"));
+    }
+
+    #[test]
+    fn builds_firefox_profile_query() {
+        let matches = matches(&["gcookie", "-f", "profile-dir", "mozilla.org"]);
+        let query = build_cookie_query(&matches).unwrap();
+
+        assert_eq!(
+            query,
+            CookieQuery::new(Browser::Firefox, "mozilla.org")
+                .with_profile_path(PathBuf::from("profile-dir"))
+        );
+    }
+
+    #[test]
+    fn builds_chrome_profile_query() {
+        let matches = matches(&["gcookie", "-p", "profile-dir", "google.com"]);
+        let query = build_cookie_query(&matches).unwrap();
+
+        assert_eq!(
+            query,
+            CookieQuery::new(Browser::Chrome, "google.com")
+                .with_profile_path(PathBuf::from("profile-dir"))
+        );
+    }
+
+    #[test]
+    fn reads_output_format() {
+        let matches = matches(&["gcookie", "--format", "json", "example.com"]);
+
+        assert_eq!(get_output_format(&matches).unwrap(), OutputFormat::Json);
+    }
 }
